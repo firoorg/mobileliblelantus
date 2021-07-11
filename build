@@ -1,0 +1,39 @@
+#!/bin/bash
+if [ -z "$1" ];then
+  echo "Please supply a name for the directory to hold the execuatables"
+  exit
+fi
+if [ -f $1 ]; then
+  echo "File $1 exist"
+  exit
+fi
+if [ ! -d $1 ]; then
+cd "secp256k1" && ./autogen.sh
+./configure --enable-experimental --enable-module-ecdh --with-bignum=no --enable-endomorphism
+make
+cd ..
+  mkdir $1
+fi
+
+
+
+echo Building Lelantus Protocol Tests
+g++ tests/protocol_tests.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/protocol_tests
+echo Building Challenge Generator Tests
+g++ tests/challenge_generator_tests.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/challenge_generator_tests
+echo Building Coin Tests
+g++ tests/coin_tests.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/coin_tests
+echo Building Inner Product Tests
+g++ tests/inner_product_test.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/inner_product_test
+echo Building Joinsplit Tests
+g++ tests/joinsplit_tests.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/joinsplit_tests
+echo Building Lelantus Primitives Tests
+g++ tests/lelantus_primitives_tests.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/lelantus_primitives_tests
+echo Building Schnorr Tests
+g++ tests/schnorr_test.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/schnorr_test
+echo Building Range Proof Tests
+g++ tests/range_proof_test.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/range_proof_test
+echo Building Serialize Tests
+g++ tests/serialize_test.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/serialize_test
+echo Building Sigma Extended Tests
+g++ tests/sigma_extended_test.cpp tests/lelantus_test_fixture.cpp src/*.cpp bitcoin/*.cpp bitcoin/support/*.cpp  bitcoin/crypto/*.cpp -g -Isecp256k1/include secp256k1/.libs/libsecp256k1.a  -lssl -lcrypto  -lboost_unit_test_framework -std=c++17 -o $1/sigma_extended_test
