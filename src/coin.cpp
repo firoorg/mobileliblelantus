@@ -1,5 +1,6 @@
 #include "coin.h"
 #include "../bitcoin/hash.h"
+#include "../bitcoin/crypto/hmac_sha512.h"
 #include "../secp256k1/include/secp256k1_ecdh.h"
 #include "../secp256k1/include/secp256k1.h"
 #include "lelantus_primitives.h"
@@ -45,6 +46,14 @@ PrivateCoin::PrivateCoin(const Params* p, uint64_t v):
     params(p) {
     this->randomize();
     this->mintCoin(v);
+}
+
+PrivateCoin::PrivateCoin(const Params* p, uint64_t value, BIP44MintData data, int version)
+        : params(p)
+{
+    this->version = version;
+    if(!this->mintCoin(value, data))
+        throw std::invalid_argument("seed is invalid.");
 }
 
 PrivateCoin::PrivateCoin(
@@ -150,6 +159,45 @@ void PrivateCoin::mintCoin(uint64_t v) {
     GroupElement commit = LelantusPrimitives::double_commit(
             params->get_g(), serialNumber, params->get_h1(), getVScalar(), params->get_h0(), randomness);
     publicCoin = PublicCoin(commit);
+}
+
+bool PrivateCoin::mintCoin(uint64_t value_, const BIP44MintData& data){
+    // HMAC-SHA512(SHA256(index),key)
+    unsigned char countHash[CSHA256().OUTPUT_SIZE];
+    std::vector<unsigned char> result(CSHA512().OUTPUT_SIZE);
+
+    std::string nCountStr = to_string(data.getIndex());
+    CSHA256().Write(reinterpret_cast<const unsigned char*>(nCountStr.c_str()), nCountStr.size()).Finalize(countHash);
+
+    CHMAC_SHA512(countHash, CSHA256().OUTPUT_SIZE).Write(data.getKeyData(), data.size()).Finalize(&result[0]);
+
+    uint512 seed = uint512(result);
+
+    // Hash top 256 bits of seed for ECDSA key
+    uint256 nSeedPrivKey = seed.trim256();
+    nSeedPrivKey = Hash(nSeedPrivKey.begin(), nSeedPrivKey.end());
+    this->setEcdsaSeckey(nSeedPrivKey);
+
+    // Create a key pair
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_create(OpenSSLContext::get_context(), &pubkey, this->ecdsaSeckey)){
+        return false;
+    }
+    // Hash the public key in the group to obtain a serial number
+    serialNumber = serialNumberFromSerializedPublicKey(
+            OpenSSLContext::get_context(), &pubkey);
+
+    //hash randomness seed with Bottom 256 bits of seed
+    uint256 nSeedRandomness = ArithToUint512(UintToArith512(seed) >> 256).trim256();
+    randomness.memberFromSeed(nSeedRandomness.begin());
+
+    // Generate a Pedersen commitment to the serial number
+    value = value_;
+    GroupElement commit = LelantusPrimitives::double_commit(
+            params->get_g(), serialNumber, params->get_h1(), getVScalar(), params->get_h0(), randomness);
+    publicCoin = PublicCoin(commit);
+
+    return true;
 }
 
 Scalar PrivateCoin::serialNumberFromSerializedPublicKey(

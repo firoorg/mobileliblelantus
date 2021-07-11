@@ -5,8 +5,23 @@
 #include "../bitcoin/uint256.h"
 #include "openssl_context.h"
 
-
 namespace lelantus {
+
+class BIP44MintData {
+public:
+    BIP44MintData(unsigned char* keydata, int32_t index){
+        memcpy(this->keydata, keydata, 32);
+        this->index = index;
+    }
+
+    const unsigned char* getKeyData() const { return keydata; }
+    const int32_t getIndex() const {return index; }
+    unsigned int size() const { return 32; }
+
+private:
+    unsigned char keydata[32];
+    int32_t index;
+};
 
 class PublicCoin {
 public:
@@ -43,6 +58,7 @@ class PrivateCoin {
 public:
 
     PrivateCoin(const Params* p, uint64_t v);
+    PrivateCoin(const Params* p, uint64_t value, BIP44MintData data, int version);
     PrivateCoin(const Params* p,
             const Scalar& serial,
             uint64_t v,
@@ -83,6 +99,7 @@ private:
 private:
     void randomize();
     void mintCoin(uint64_t v);
+    bool mintCoin(uint64_t value_, const BIP44MintData& data);
 };
 
 }// namespace lelantus
