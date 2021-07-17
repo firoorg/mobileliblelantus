@@ -6,6 +6,7 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
+#include <endian.h>
 #include <algorithm>
 #include <assert.h>
 #include <ios>
@@ -23,7 +24,6 @@
 #include <deque>
 #include "prevector.h"
 #include <memory>
-#include <boost/optional.hpp>
 using namespace std;
 
 
@@ -786,12 +786,6 @@ template<typename Stream, typename T> void Unserialize(Stream& os, std::shared_p
 template<typename Stream, typename T> void Serialize(Stream& os, const std::unique_ptr<const T>& p);
 template<typename Stream, typename T> void Unserialize(Stream& os, std::unique_ptr<const T>& p);
 
-/**
- * optional
- */
-template<typename Stream, typename T> void Serialize(Stream& os, const boost::optional<T>& p);
-template<typename Stream, typename T> void Unserialize(Stream& os, boost::optional<T>& p);
-
 
 /**
  * If none of the specialized versions above matched, default to calling member function.
@@ -1117,31 +1111,6 @@ void Unserialize(Stream& is, std::shared_ptr<const T>& p)
 {
     p = std::make_shared<const T>(deserialize, is);
 }
-
-
-
-/**
- * optional
- */
-template<typename Stream, typename T> void
-Serialize(Stream& os, const boost::optional<T>& p)
-{
-    bool exists(p);
-    Serialize(os, exists);
-    if (exists)
-        Serialize(os, *p);
-}
-
-template<typename Stream, typename T>
-void Unserialize(Stream& is, boost::optional<T>& p)
-{
-    bool exists;
-    Unserialize(is, exists);
-    if (exists)
-        p.emplace(deserialize, is);
-}
-
-
 
 /**
  * Support for ADD_SERIALIZE_METHODS and READWRITE macro
