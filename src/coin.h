@@ -7,6 +7,27 @@
 
 namespace lelantus {
 
+struct CLelantusEntry {
+    //public
+    GroupElement value;
+
+    //private
+    Scalar randomness;
+    Scalar serialNumber;
+
+    // Signature over partial transaction
+    // to make sure the outputs are not changed by attacker.
+    std::vector<unsigned char> ecdsaSecretKey;
+
+    bool IsUsed;
+    int nHeight;
+    int id;
+
+    // Starting from Version 3 == sigma, this number is coin value * COIN,
+    // I.E. it is set to 100.000.000 for 1 firo.
+    int64_t amount;
+};
+
 class BIP44MintData {
 public:
     BIP44MintData(unsigned char* keydata, int32_t index){

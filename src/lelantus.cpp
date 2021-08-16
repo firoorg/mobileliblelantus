@@ -1,12 +1,23 @@
 #include "coin.h"
 #include "schnorr_prover.h"
 #include "challenge_generator_impl.h"
+#include "joinsplit.h"
 #include "../bitcoin/streams.h"
 #include "../bitcoin/hash.h"
+#include "../bitcoin/amount.h"
+#include "../bitcoin/crypto/hmac_sha512.h"
+#include "../bitcoin/crypto/aes.h"
+
+#include <list>
 
 #define LELANTUS_TX_VERSION_4_5             45
 #define OP_LELANTUSMINT                     0xc5
+#define OP_LELANTUSJMINT                    0xc6
+#define DEFAULT_TX_CONFIRM_TARGET           6
+#define LELANTUS_INPUT_LIMIT_PER_TRANSACTION            50
+#define LELANTUS_VALUE_SPEND_LIMIT_PER_TRANSACTION     (5001 * COIN)
 
+static const CAmount DEFAULT_FALLBACK_FEE = 20000;
 static const int PROTOCOL_VERSION = 90030;
 
 using namespace lelantus;
@@ -67,4 +78,233 @@ PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t ind
     script.insert(script.end(), serializedHash.begin(), serializedHash.end());
 
     return coin;
+}
+
+template<typename Iterator>
+static uint64_t CalculateLelantusCoinsBalance(Iterator begin, Iterator end) {
+    uint64_t balance(0);
+    for (auto start = begin; start != end; start++) {
+        balance += start->amount;
+    }
+    return balance;
+}
+
+bool GetCoinsToJoinSplit(
+        uint64_t required,
+        std::vector<CLelantusEntry>& coinsToSpend_out,
+        uint64_t& changeToMint,
+        std::list<CLelantusEntry> coins)
+{
+    if (required > LELANTUS_VALUE_SPEND_LIMIT_PER_TRANSACTION) {
+        return false;
+    }
+
+    uint64_t availableBalance = CalculateLelantusCoinsBalance(coins.begin(), coins.end());
+
+    if (required > availableBalance) {
+        return false;
+    }
+
+    // sort by biggest amount. if it is same amount we will prefer the older block
+    auto comparer = [](const CLelantusEntry& a, const CLelantusEntry& b) -> bool {
+        return a.amount != b.amount ? a.amount > b.amount : a.nHeight < b.nHeight;
+    };
+    coins.sort(comparer);
+
+    uint64_t spend_val(0);
+
+    std::list<CLelantusEntry> coinsToSpend;
+
+    while (spend_val < required) {
+        if(coins.empty())
+            break;
+
+        CLelantusEntry choosen;
+        uint64_t need = required - spend_val;
+
+        auto itr = coins.begin();
+        if(need >= itr->amount) {
+            choosen = *itr;
+            coins.erase(itr);
+        } else {
+            for (auto coinIt = coins.rbegin(); coinIt != coins.rend(); coinIt++) {
+                auto nextItr = coinIt;
+                nextItr++;
+
+                if (coinIt->amount >= need && (nextItr == coins.rend() || nextItr->amount != coinIt->amount)) {
+                    choosen = *coinIt;
+                    coins.erase(std::next(coinIt).base());
+                    break;
+                }
+            }
+        }
+
+        spend_val += choosen.amount;
+        coinsToSpend.push_back(choosen);
+    }
+
+    // sort by group id ay ascending order. it is mandatory for creting proper joinsplit
+    auto idComparer = [](const CLelantusEntry& a, const CLelantusEntry& b) -> bool {
+        return a.id < b.id;
+    };
+    coinsToSpend.sort(idComparer);
+
+    changeToMint = spend_val - required;
+    coinsToSpend_out.insert(coinsToSpend_out.begin(), coinsToSpend.begin(), coinsToSpend.end());
+
+    return true;
+}
+
+uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, std::list<CLelantusEntry> coins, std::vector<CLelantusEntry>& coinsToBeSpent) {
+    uint64_t fee;
+    unsigned size;
+
+    for (fee = 0;;) {
+        uint64_t currentRequired = spendAmount;
+
+        if (!subtractFeeFromAmount)
+            currentRequired += fee;
+
+        coinsToBeSpent.clear();
+        uint64_t changeToMint = 0;
+
+        if (!GetCoinsToJoinSplit(currentRequired, coinsToBeSpent, changeToMint, coins)) {
+            return 0;
+        }
+
+        // 1054 is constant part, mainly Schnorr and Range proofs, 2560 is for each sigma/aux data
+        // 179 other parts of tx, assuming 1 utxo and 1 jmint
+        size = 1054 + 2560 * coinsToBeSpent.size() + 179;
+        //        uint64_t feeNeeded = GetMinimumFee(size, DEFAULT_TX_CONFIRM_TARGET);
+        uint64_t feeNeeded = size; //TODO(Levon) temporary, use real estimation methods here
+
+        if (fee >= feeNeeded) {
+            break;
+        }
+
+        fee = feeNeeded;
+
+        if(subtractFeeFromAmount)
+            break;
+    }
+
+    return fee;
+}
+
+std::vector<unsigned char> EncryptMintAmount(unsigned char* keydata, uint64_t amount, const secp_primitives::GroupElement& pubcoin) {
+    std::vector<unsigned char> key(CHMAC_SHA512::OUTPUT_SIZE);
+    CHMAC_SHA512(keydata, 32).Finalize(&key[0]);
+    AES256Encrypt enc(key.data());
+    std::vector<unsigned char> ciphertext(16);
+    std::vector<unsigned char> plaintext(16);
+    memcpy(plaintext.data(), &amount, 8);
+    enc.Encrypt(ciphertext.data(), plaintext.data());
+    return ciphertext;
+}
+
+lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut) {
+
+    auto params = lelantus::Params::get_default();
+    PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_VERSION_4_5);
+
+    auto &pubCoin = coin.getPublicCoin();
+
+    if (!pubCoin.validate()) {
+        throw std::runtime_error("Unable to mint a lelantus coin.");
+    }
+
+    CDataStream ss(SER_GETHASH, 0);
+    ss << pubCoin.getValue();
+    keyPathOut = Hash(ss.begin(), ss.end()).GetFirstUint32();
+
+    return coin;
+}
+
+lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(
+        lelantus::PrivateCoin coin,
+        uint64_t value,
+        uint160 seedID,
+        unsigned char* AESkeydata,
+        std::vector<unsigned char>& script) {
+
+    auto &pubCoin = coin.getPublicCoin();
+    script.push_back((unsigned char)OP_LELANTUSJMINT);
+
+    std::vector<unsigned char> vch = pubCoin.getValue().getvch();
+    script.insert(script.end(), vch.begin(), vch.end());
+
+    std::vector<unsigned char> encryptedValue = EncryptMintAmount(AESkeydata, value, pubCoin.getValue());
+    script.insert(script.end(), encryptedValue.begin(), encryptedValue.end());
+
+    auto pubcoin = pubCoin.getValue() +
+                   lelantus::Params::get_default()->get_h1() * Scalar(value).negate();
+    uint256 hashPub = primitives::GetPubCoinValueHash(pubcoin);
+    CDataStream ss(SER_GETHASH, 0);
+    ss << hashPub;
+    ss << seedID;
+    uint256 hashForRecover = Hash(ss.begin(), ss.end());
+
+    CDataStream serializedHash(SER_NETWORK, 0);
+    serializedHash << hashForRecover;
+    script.insert(script.end(), serializedHash.begin(), serializedHash.end());
+
+    return coin;
+}
+
+struct CoinCompare
+{
+    bool operator()( const std::pair<lelantus::PrivateCoin, uint32_t>& left, const std::pair<lelantus::PrivateCoin, uint32_t>& right ) const {
+        return left.second < right.second;
+    }
+};
+
+void CreateJoinSplit(
+        const uint256& txHash,
+        const lelantus::PrivateCoin& Cout,
+        const uint64_t& Vout,
+        const uint64_t& fee,
+        const std::vector<CLelantusEntry>& coinsToBeSpent,
+        const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets,
+        const std::map<uint32_t, uint256>& groupBlockHashes,
+        std::vector<uint8_t>& script) {
+
+    auto params = lelantus::Params::get_default();
+
+    std::vector<std::pair<lelantus::PrivateCoin, uint32_t>> coins;
+    coins.reserve(coinsToBeSpent.size());
+    int version = LELANTUS_TX_VERSION_4_5;
+
+    std::vector<std::vector<unsigned char>> anonymity_set_hashes;
+    for (const auto &spend : coinsToBeSpent) {
+        // construct public part of the mint
+        lelantus::PublicCoin pub(spend.value);
+        // construct private part of the mint
+        lelantus::PrivateCoin priv(params, spend.amount);
+        priv.setVersion(version);
+        priv.setSerialNumber(spend.serialNumber);
+        priv.setRandomness(spend.randomness);
+        priv.setEcdsaSeckey(spend.ecdsaSecretKey);
+        priv.setPublicCoin(pub);
+
+        // get coin group
+        uint32_t groupId = spend.id;
+        coins.emplace_back(std::make_pair(priv, groupId));
+    }
+
+    std::sort(coins.begin(), coins.end(), CoinCompare());
+
+    lelantus::JoinSplit joinSplit(params, coins, anonymity_sets, anonymity_set_hashes, Vout, {Cout}, fee, groupBlockHashes, txHash, version);
+
+    std::vector<lelantus::PublicCoin>  pCout;
+    pCout.emplace_back(Cout.getPublicCoin());
+
+    if (!joinSplit.Verify(anonymity_sets, anonymity_set_hashes, pCout, Vout, txHash)) {
+        throw std::runtime_error(("The joinsplit transaction failed to verify"));
+    }
+
+    // construct spend script
+    CDataStream serialized(SER_NETWORK, PROTOCOL_VERSION);
+    serialized << joinSplit;
+
+    script.insert(script.end(), serialized.begin(), serialized.end());
 }

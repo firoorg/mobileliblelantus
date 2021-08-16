@@ -4,13 +4,11 @@
 #include "../secp256k1/include/Scalar.h"
 #include "../secp256k1/include/GroupElement.h"
 #include "../bitcoin/serialize.h"
+#include "../bitcoin/amount.h"
 
 using namespace secp_primitives;
 
 namespace lelantus {
-
-static const uint64_t CENT = 1000000;
-static const uint64_t COIN = 100000000;
 
 class Params {
 public:
