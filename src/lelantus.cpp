@@ -10,7 +10,7 @@
 
 #include <list>
 
-#define LELANTUS_TX_VERSION_4_5             45
+#define LELANTUS_TX_TPAYLOAD                47
 #define OP_LELANTUSMINT                     0xc5
 #define OP_LELANTUSJMINT                    0xc6
 #define DEFAULT_TX_CONFIRM_TARGET           6
@@ -43,7 +43,7 @@ void GenerateMintSchnorrProof(const lelantus::PrivateCoin& coin, CDataStream&  s
 
 PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t index, uint160 seedID, std::vector<unsigned char>& script) {
     auto* params = Params::get_default();
-    PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_VERSION_4_5);
+    PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
 
     // Get a copy of the 'public' portion of the coin. You should
     // embed this into a Lelantus 'MINT' transaction along with a series of currency inputs
@@ -155,7 +155,7 @@ bool GetCoinsToJoinSplit(
     return true;
 }
 
-uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, std::list<CLelantusEntry> coins, std::vector<CLelantusEntry>& coinsToBeSpent) {
+uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, std::list<CLelantusEntry> coins, std::vector<CLelantusEntry>& coinsToBeSpent, uint64_t& changeToMint) {
     uint64_t fee;
     unsigned size;
 
@@ -166,7 +166,7 @@ uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, 
             currentRequired += fee;
 
         coinsToBeSpent.clear();
-        uint64_t changeToMint = 0;
+        changeToMint = 0;
 
         if (!GetCoinsToJoinSplit(currentRequired, coinsToBeSpent, changeToMint, coins)) {
             return 0;
@@ -205,7 +205,7 @@ std::vector<unsigned char> EncryptMintAmount(unsigned char* keydata, uint64_t am
 lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut) {
 
     auto params = lelantus::Params::get_default();
-    PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_VERSION_4_5);
+    PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
 
     auto &pubCoin = coin.getPublicCoin();
 
@@ -272,7 +272,7 @@ void CreateJoinSplit(
 
     std::vector<std::pair<lelantus::PrivateCoin, uint32_t>> coins;
     coins.reserve(coinsToBeSpent.size());
-    int version = LELANTUS_TX_VERSION_4_5;
+    int version = LELANTUS_TX_TPAYLOAD;
 
     std::vector<std::vector<unsigned char>> anonymity_set_hashes;
     for (const auto &spend : coinsToBeSpent) {

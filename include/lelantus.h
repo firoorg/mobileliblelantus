@@ -5,7 +5,7 @@
 
 lelantus::PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t index, uint160 seedID, std::vector<unsigned char>& script);
 
-uint64_t EstimateJoinSplitFee(uint64_t spendAmound, bool subtractFeeFromAmount, std::list<CLelantusEntry> coinsl, std::vector<CLelantusEntry>& coinsToBeSpent);
+uint64_t EstimateJoinSplitFee(uint64_t spendAmound, bool subtractFeeFromAmount, std::list<CLelantusEntry> coinsl, std::vector<CLelantusEntry>& coinsToBeSpent, uint64_t& changeToMint);
 
 lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut);
 
