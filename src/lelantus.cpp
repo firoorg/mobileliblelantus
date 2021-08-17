@@ -91,9 +91,9 @@ static uint64_t CalculateLelantusCoinsBalance(Iterator begin, Iterator end) {
 
 bool GetCoinsToJoinSplit(
         uint64_t required,
-        std::vector<CLelantusEntry>& coinsToSpend_out,
+        std::vector<lelantus::CLelantusEntry>& coinsToSpend_out,
         uint64_t& changeToMint,
-        std::list<CLelantusEntry> coins)
+        std::list<lelantus::CLelantusEntry> coins)
 {
     if (required > LELANTUS_VALUE_SPEND_LIMIT_PER_TRANSACTION) {
         return false;
@@ -106,20 +106,20 @@ bool GetCoinsToJoinSplit(
     }
 
     // sort by biggest amount. if it is same amount we will prefer the older block
-    auto comparer = [](const CLelantusEntry& a, const CLelantusEntry& b) -> bool {
+    auto comparer = [](const lelantus::CLelantusEntry& a, const lelantus::CLelantusEntry& b) -> bool {
         return a.amount != b.amount ? a.amount > b.amount : a.nHeight < b.nHeight;
     };
     coins.sort(comparer);
 
     uint64_t spend_val(0);
 
-    std::list<CLelantusEntry> coinsToSpend;
+    std::list<lelantus::CLelantusEntry> coinsToSpend;
 
     while (spend_val < required) {
         if(coins.empty())
             break;
 
-        CLelantusEntry choosen;
+        lelantus::CLelantusEntry choosen;
         uint64_t need = required - spend_val;
 
         auto itr = coins.begin();
@@ -144,7 +144,7 @@ bool GetCoinsToJoinSplit(
     }
 
     // sort by group id ay ascending order. it is mandatory for creting proper joinsplit
-    auto idComparer = [](const CLelantusEntry& a, const CLelantusEntry& b) -> bool {
+    auto idComparer = [](const lelantus::CLelantusEntry& a, const lelantus::CLelantusEntry& b) -> bool {
         return a.id < b.id;
     };
     coinsToSpend.sort(idComparer);
@@ -155,7 +155,7 @@ bool GetCoinsToJoinSplit(
     return true;
 }
 
-uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, std::list<CLelantusEntry> coins, std::vector<CLelantusEntry>& coinsToBeSpent, uint64_t& changeToMint) {
+uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, std::list<lelantus::CLelantusEntry> coins, std::vector<lelantus::CLelantusEntry>& coinsToBeSpent, uint64_t& changeToMint) {
     uint64_t fee;
     unsigned size;
 
@@ -263,7 +263,7 @@ void CreateJoinSplit(
         const lelantus::PrivateCoin& Cout,
         const uint64_t& Vout,
         const uint64_t& fee,
-        const std::vector<CLelantusEntry>& coinsToBeSpent,
+        const std::vector<lelantus::CLelantusEntry>& coinsToBeSpent,
         const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets,
         const std::map<uint32_t, uint256>& groupBlockHashes,
         std::vector<uint8_t>& script) {
