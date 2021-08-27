@@ -265,6 +265,7 @@ void CreateJoinSplit(
         const uint64_t& fee,
         const std::vector<lelantus::CLelantusEntry>& coinsToBeSpent,
         const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets,
+        const std::vector<std::vector<unsigned char>>& anonymity_set_hashes,
         const std::map<uint32_t, uint256>& groupBlockHashes,
         std::vector<uint8_t>& script) {
 
@@ -274,7 +275,6 @@ void CreateJoinSplit(
     coins.reserve(coinsToBeSpent.size());
     int version = LELANTUS_TX_TPAYLOAD;
 
-    std::vector<std::vector<unsigned char>> anonymity_set_hashes;
     for (const auto &spend : coinsToBeSpent) {
         // construct public part of the mint
         lelantus::PublicCoin pub(spend.value);

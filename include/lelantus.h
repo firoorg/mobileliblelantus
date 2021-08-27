@@ -12,6 +12,15 @@ lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keyda
 
 lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(lelantus::PrivateCoin coin, uint64_t value, uint160 seedID, unsigned char* AESkeydata, std::vector<unsigned char>& script);
 
-void CreateJoinSplit(const uint256& txHash, const lelantus::PrivateCoin& Cout, const uint64_t& Vout, const uint64_t& fee, const std::vector<lelantus::CLelantusEntry>& coinsToBeSpent, const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets, const std::map<uint32_t, uint256>& groupBlockHashes,  std::vector<uint8_t>& script);
+void CreateJoinSplit(
+        const uint256& txHash,
+        const lelantus::PrivateCoin& Cout,
+        const uint64_t& Vout,
+        const uint64_t& fee,
+        const std::vector<lelantus::CLelantusEntry>& coinsToBeSpent,
+        const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets,
+        const std::vector<std::vector<unsigned char>>& anonymity_set_hashes,
+        const std::map<uint32_t, uint256>& groupBlockHashes,
+        std::vector<uint8_t>& script);
 
 #endif //MOBILELIBLELANTUS_LELANTUS_H
