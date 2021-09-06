@@ -157,7 +157,7 @@ void RangeProver::batch_proof(
         y_i_inv.go_next();
     }
 
-    int inner_product_version = 2;
+    int inner_product_version = 3;
     InnerProductProofGenerator InnerProductProofGenerator(g_, h_prime, g, inner_product_version);
     //t^ is calculated inside inner product proof generation with name c
     Scalar x_u;

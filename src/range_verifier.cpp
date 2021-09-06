@@ -57,6 +57,8 @@ bool RangeVerifier::verify_batch(const std::vector<GroupElement>& V, const std::
     std::vector<unsigned char> pre_inner(domain_separator.begin(), domain_separator.end());
     challengeGenerator->add(pre_inner);
 
+    challengeGenerator->add(innerProductProof.c_);
+
     for (int i = 0; i < log_n; ++i)
     {
         std::vector<GroupElement> group_elements_i = {innerProductProof.L_[i], innerProductProof.R_[i]};
