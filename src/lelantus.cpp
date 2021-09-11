@@ -174,7 +174,7 @@ uint64_t EstimateJoinSplitFee(uint64_t spendAmount, bool subtractFeeFromAmount, 
 
         // 1054 is constant part, mainly Schnorr and Range proofs, 2560 is for each sigma/aux data
         // 179 other parts of tx, assuming 1 utxo and 1 jmint
-        size = 1054 + 2560 * coinsToBeSpent.size() + 179;
+        size = 1054 + 2560 * coinsToBeSpent.size() + 180;
         //        uint64_t feeNeeded = GetMinimumFee(size, DEFAULT_TX_CONFIRM_TARGET);
         uint64_t feeNeeded = size; //TODO(Levon) temporary, use real estimation methods here
 
