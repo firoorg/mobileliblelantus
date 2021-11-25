@@ -80,6 +80,17 @@ PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t ind
     return coin;
 }
 
+uint256 CreateMintTag(unsigned char* keydata, int32_t index, uint160 seedID) {
+    auto* params = Params::get_default();
+    PrivateCoin coin(params, 0, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
+
+    uint256 hashPub = primitives::GetPubCoinValueHash(coin.getPublicCoin().getValue());
+    CDataStream ss(SER_GETHASH, 0);
+    ss << hashPub;
+    ss << seedID;
+    return Hash(ss.begin(), ss.end());
+}
+
 template<typename Iterator>
 static uint64_t CalculateLelantusCoinsBalance(Iterator begin, Iterator end) {
     uint64_t balance(0);
@@ -200,6 +211,16 @@ std::vector<unsigned char> EncryptMintAmount(unsigned char* keydata, uint64_t am
     memcpy(plaintext.data(), &amount, 8);
     enc.Encrypt(ciphertext.data(), plaintext.data());
     return ciphertext;
+}
+
+void DecryptMintAmount(unsigned char* keydata, const std::vector<unsigned char>& encryptedValue, uint64_t& amount) {
+    std::vector<unsigned char> key(CHMAC_SHA512::OUTPUT_SIZE);
+    CHMAC_SHA512(keydata, 32).Finalize(&key[0]);
+
+    AES256Decrypt dec(key.data());
+    std::vector<unsigned char> plaintext(16);
+    dec.Decrypt(plaintext.data(), encryptedValue.data());
+    memcpy(&amount, plaintext.data(), 8);
 }
 
 lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut) {
