@@ -7,6 +7,7 @@
 #include "../bitcoin/amount.h"
 #include "../bitcoin/crypto/hmac_sha512.h"
 #include "../bitcoin/crypto/aes.h"
+#include "../bitcoin/utilstrencodings.h"
 
 #include <list>
 
@@ -239,6 +240,15 @@ lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keyda
     keyPathOut = Hash(ss.begin(), ss.end()).GetFirstUint32();
 
     return coin;
+}
+
+uint32_t GenerateAESKeyPath(const std::string& serializedCoin) {
+    GroupElement coin;
+    coin.deserialize(ParseHex(serializedCoin).data());
+
+    CDataStream ss(SER_GETHASH, 0);
+    ss << coin;
+    return Hash(ss.begin(), ss.end()).GetFirstUint32();
 }
 
 lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(
