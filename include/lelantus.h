@@ -12,7 +12,7 @@ uint64_t EstimateJoinSplitFee(uint64_t spendAmound, bool subtractFeeFromAmount, 
 
 lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut);
 
-uint32_t GenerateAESKeyPath(const std::string& serializedCoin)
+uint32_t GenerateAESKeyPath(const std::string& serializedCoin);
 
 lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(lelantus::PrivateCoin coin, uint64_t value, uint160 seedID, unsigned char* AESkeydata, std::vector<unsigned char>& script);
 
