@@ -23,8 +23,9 @@ static const int PROTOCOL_VERSION = 90030;
 
 using namespace lelantus;
 
-void SetTestnet(bool isTestnet) {
-    lelantus::Params::get_default(isTestnet);
+void SetTestnet(bool isTestnet_) {
+    isTestnet = isTestnet_;
+    lelantus::Params::get_default();
 }
 
 void GenerateMintSchnorrProof(const lelantus::PrivateCoin& coin, CDataStream&  serializedSchnorrProof)

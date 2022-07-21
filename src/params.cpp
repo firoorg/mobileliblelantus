@@ -4,13 +4,15 @@ namespace lelantus {
 
     std::unique_ptr<Params> Params::instance;
 
-Params const* Params::get_default(bool isTestnet) {
-    if (instance) {
+Params const* Params::get_default() {
+    if (instance && instance->isForTestnet == isTestnet) {
         return instance.get();
     } else {
-        if (instance) {
+        if (instance && instance->isForTestnet == isTestnet) {
             return instance.get();
         }
+
+        instance->isForTestnet = isTestnet;
 
         //fixing generator G;
         GroupElement g;

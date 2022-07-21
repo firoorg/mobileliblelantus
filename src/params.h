@@ -9,10 +9,11 @@
 using namespace secp_primitives;
 
 namespace lelantus {
+static bool isTestnet;
 
 class Params {
 public:
-    static Params const* get_default(bool isTestnet = false);
+    static Params const* get_default();
     const GroupElement& get_g() const;
     const GroupElement& get_h0() const;
     const GroupElement& get_h1() const;
@@ -34,6 +35,7 @@ private:
 
 private:
     static std::unique_ptr<Params> instance;
+    bool isForTestnet;
 
     //sigma params
     GroupElement g;
