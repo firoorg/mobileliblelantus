@@ -4,7 +4,7 @@ namespace lelantus {
 
     std::unique_ptr<Params> Params::instance;
 
-Params const* Params::get_default() {
+Params const* Params::get_default(bool isTestnet) {
     if (instance) {
         return instance.get();
     } else {
@@ -14,11 +14,16 @@ Params const* Params::get_default() {
 
         //fixing generator G;
         GroupElement g;
-        unsigned char buff[32] = {0};
-        GroupElement base;
-        base.set_base_g();
-        base.normalSha256(buff);
-        g.generate(buff);
+        if (!isTestnet) {
+            unsigned char buff[32] = {0};
+            GroupElement base;
+            base.set_base_g();
+            base.normalSha256(buff);
+            g.generate(buff);
+        }
+        else
+            g = GroupElement("9216064434961179932092223867844635691966339998754536116709681652691785432045",
+                             "33986433546870000256104618635743654523665060392313886665479090285075695067131");
 
 
         //fixing n and m; N = n^m = 65,536

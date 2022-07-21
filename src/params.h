@@ -12,7 +12,7 @@ namespace lelantus {
 
 class Params {
 public:
-    static Params const* get_default();
+    static Params const* get_default(bool isTestnet = false);
     const GroupElement& get_g() const;
     const GroupElement& get_h0() const;
     const GroupElement& get_h1() const;

@@ -4,6 +4,8 @@
 #include "../src/coin.h"
 #include <list>
 
+void SetTestnet(bool isTestnet);
+
 lelantus::PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t index, uint160 seedID, std::vector<unsigned char>& script);
 
 uint256 CreateMintTag(unsigned char* keydata, int32_t index, uint160 seedID);
