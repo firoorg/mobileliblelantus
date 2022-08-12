@@ -24,13 +24,12 @@ static const int PROTOCOL_VERSION = 90030;
 using namespace lelantus;
 
 void SetTestnet(bool isTestnet_) {
-    isTestnet = isTestnet_;
-    lelantus::Params::get_default();
+    lelantus::Params::get_default(isTestnet_);
 }
 
-void GenerateMintSchnorrProof(const lelantus::PrivateCoin& coin, CDataStream&  serializedSchnorrProof)
+void GenerateMintSchnorrProof(const lelantus::PrivateCoin& coin, CDataStream&  serializedSchnorrProof, bool isTestnet_)
 {
-    auto params = lelantus::Params::get_default();
+    auto params = lelantus::Params::get_default(isTestnet_);
 
     SchnorrProof schnorrProof;
 
@@ -47,8 +46,8 @@ void GenerateMintSchnorrProof(const lelantus::PrivateCoin& coin, CDataStream&  s
     serializedSchnorrProof << schnorrProof;
 }
 
-PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t index, uint160 seedID, std::vector<unsigned char>& script) {
-    auto* params = Params::get_default();
+PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t index, uint160 seedID, std::vector<unsigned char>& script, bool isTestnet_) {
+    auto* params = Params::get_default(isTestnet_);
     PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
 
     // Get a copy of the 'public' portion of the coin. You should
@@ -68,10 +67,10 @@ PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t ind
 
     // generating schnorr proof
     CDataStream serializedSchnorrProof(SER_NETWORK, PROTOCOL_VERSION);
-    GenerateMintSchnorrProof(coin, serializedSchnorrProof);
+    GenerateMintSchnorrProof(coin, serializedSchnorrProof, isTestnet_);
     script.insert(script.end(), serializedSchnorrProof.begin(), serializedSchnorrProof.end()); //this uses 98 byte
 
-    auto pubcoin = pubCoin.getValue() + lelantus::Params::get_default()->get_h1() * Scalar(value).negate();
+    auto pubcoin = pubCoin.getValue() + lelantus::Params::get_default(isTestnet_)->get_h1() * Scalar(value).negate();
     uint256 hashPub = primitives::GetPubCoinValueHash(pubcoin);
     CDataStream ss(SER_GETHASH, 0);
     ss << hashPub;
@@ -86,8 +85,8 @@ PrivateCoin CreateMintScript(uint64_t value, unsigned char* keydata, int32_t ind
     return coin;
 }
 
-uint256 CreateMintTag(unsigned char* keydata, int32_t index, uint160 seedID) {
-    auto* params = Params::get_default();
+uint256 CreateMintTag(unsigned char* keydata, int32_t index, uint160 seedID, bool isTestnet_) {
+    auto* params = Params::get_default(isTestnet_);
     PrivateCoin coin(params, 0, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
 
     uint256 hashPub = primitives::GetPubCoinValueHash(coin.getPublicCoin().getValue());
@@ -229,9 +228,9 @@ void DecryptMintAmount(unsigned char* keydata, const std::vector<unsigned char>&
     memcpy(&amount, plaintext.data(), 8);
 }
 
-lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut) {
+lelantus::PrivateCoin CreateMintPrivateCoin(uint64_t value, unsigned char* keydata, int32_t index, uint32_t& keyPathOut, bool isTestnet_) {
 
-    auto params = lelantus::Params::get_default();
+    auto params = lelantus::Params::get_default(isTestnet_);
     PrivateCoin coin(params, value, BIP44MintData(keydata, index), LELANTUS_TX_TPAYLOAD);
 
     auto &pubCoin = coin.getPublicCoin();
@@ -261,7 +260,7 @@ lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(
         uint64_t value,
         uint160 seedID,
         unsigned char* AESkeydata,
-        std::vector<unsigned char>& script) {
+        std::vector<unsigned char>& script, bool isTestnet_) {
 
     auto &pubCoin = coin.getPublicCoin();
     script.push_back((unsigned char)OP_LELANTUSJMINT);
@@ -273,7 +272,7 @@ lelantus::PrivateCoin CreateJMintScriptFromPrivateCoin(
     script.insert(script.end(), encryptedValue.begin(), encryptedValue.end());
 
     auto pubcoin = pubCoin.getValue() +
-                   lelantus::Params::get_default()->get_h1() * Scalar(value).negate();
+                   lelantus::Params::get_default(isTestnet_)->get_h1() * Scalar(value).negate();
     uint256 hashPub = primitives::GetPubCoinValueHash(pubcoin);
     CDataStream ss(SER_GETHASH, 0);
     ss << hashPub;
@@ -303,9 +302,9 @@ void CreateJoinSplit(
         const std::map<uint32_t, std::vector<lelantus::PublicCoin>>& anonymity_sets,
         const std::vector<std::vector<unsigned char>>& anonymity_set_hashes,
         const std::map<uint32_t, uint256>& groupBlockHashes,
-        std::vector<uint8_t>& script) {
+        std::vector<uint8_t>& script, bool isTestnet_) {
 
-    auto params = lelantus::Params::get_default();
+    auto params = lelantus::Params::get_default(isTestnet_);
 
     std::vector<std::pair<lelantus::PrivateCoin, uint32_t>> coins;
     coins.reserve(coinsToBeSpent.size());

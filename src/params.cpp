@@ -4,15 +4,7 @@ namespace lelantus {
 
     std::unique_ptr<Params> Params::instance;
 
-Params const* Params::get_default() {
-    if (instance && instance->isForTestnet == isTestnet) {
-        return instance.get();
-    } else {
-        if (instance && instance->isForTestnet == isTestnet) {
-            return instance.get();
-        }
-
-        instance->isForTestnet = isTestnet;
+Params const* Params::get_default(bool isTestnet) {
 
         //fixing generator G;
         GroupElement g;
@@ -23,9 +15,10 @@ Params const* Params::get_default() {
             base.normalSha256(buff);
             g.generate(buff);
         }
-        else
+        else{
             g = GroupElement("9216064434961179932092223867844635691966339998754536116709681652691785432045",
                              "33986433546870000256104618635743654523665060392313886665479090285075695067131");
+        }
 
 
         //fixing n and m; N = n^m = 65,536
@@ -38,7 +31,6 @@ Params const* Params::get_default() {
 
         instance.reset(new Params(g, n, m, n_rangeProof, max_m_rangeProof));
         return instance.get();
-    }
 }
 
 Params::Params(const GroupElement& g_, int n_sigma_, int m_sigma_, int n_rangeProof_, int max_m_rangeProof_):
