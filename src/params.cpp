@@ -14,12 +14,17 @@ Params const* Params::get_default(bool isTestnet) {
             base.set_base_g();
             base.normalSha256(buff);
             g.generate(buff);
+
+            nMaxValueLelantusSpendPerTransaction = 5001 * COIN;
+            nMaxValueLelantusMint = 5001 * COIN;
         }
-        else{
+        else {
+            nMaxValueLelantusSpendPerTransaction = 1001 * COIN;
+            nMaxValueLelantusMint = 1001 * COIN;
+
             g = GroupElement("9216064434961179932092223867844635691966339998754536116709681652691785432045",
                              "33986433546870000256104618635743654523665060392313886665479090285075695067131");
         }
-
 
         //fixing n and m; N = n^m = 65,536
         int n = 16;
