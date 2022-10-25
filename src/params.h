@@ -9,11 +9,10 @@
 using namespace secp_primitives;
 
 namespace lelantus {
-static bool isTestnet;
 
 class Params {
 public:
-    static Params const* get_default();
+    static Params const* get_default(bool isTestnet = false);
     const GroupElement& get_g() const;
     const GroupElement& get_h0() const;
     const GroupElement& get_h1() const;
@@ -27,15 +26,14 @@ public:
     const Scalar& get_limit_range() const;
     const GroupElement& get_h1_limit_range() const;
 
-    uint64_t nMaxValueLelantusSpendPerTransaction = 5001 * COIN;
-    uint64_t nMaxValueLelantusMint = 5001 * COIN;
+    uint64_t nMaxValueLelantusSpendPerTransaction;
+    uint64_t nMaxValueLelantusMint;
 
 private:
     Params(const GroupElement& g_sigma_, int n, int m, int n_rangeProof_, int max_m_rangeProof_);
 
 private:
     static std::unique_ptr<Params> instance;
-    bool isForTestnet;
 
     //sigma params
     GroupElement g;
